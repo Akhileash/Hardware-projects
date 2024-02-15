@@ -2,12 +2,12 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 
-const char* ssid = "Akhileash's Galaxy S20 FE 5G";
-const char* password = "iszs8637";
-const char* apiKey = "815036a6ce6c133139d384f6011040b4";
-const char* city = "Kundrathur";
-const char* firebaseHost = "espparameters-default-rtdb.firebaseio.com/";
-const char* firebaseSecret = "AIzaSyCZn0X-7dNRteuaGpmBnTkSYNH6XcOxihQ";
+const char* ssid = "YOUR WIFI NAME";
+const char* password = "IT'S PASSWORD";
+const char* apiKey = "YOUR API KEY";
+const char* city = "YOUR LOCATION";
+const char* firebaseHost = "PATH OF YOUR FIREBASE";
+const char* firebaseSecret = "WEB API OF YOUR FIREBASE";
 const char* firebasePath = "/weather_data.json"; // Adjust the path as needed
 
 void setup() {
