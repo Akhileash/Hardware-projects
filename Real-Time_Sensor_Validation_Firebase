@@ -1,1 +1,163 @@
+//Libraries to transmit and get value
+#include <esp_now.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <Arduino_JSON.h>
 
+//WiFi name and password for connecting with web
+const char* ssid = "Your WiFi Name";
+const char* password = "Your Password";
+
+//API key of openweather
+String openWeatherMapApiKey = "Api Key";
+
+//The specifies place to check conditions
+String city = "City";
+String countryCode = "IN";
+
+//Parameters need to be checked
+String Temperature_Value;
+String Humidity_Value;
+
+//For delay purpose 
+unsigned long lastTime = 0;
+unsigned long timerDelay = 10000;
+
+//To store the parameters whole value
+String jsonBuffer;
+ 
+// MAC Address of responder
+uint8_t broadcastAddress[] = {0x84, 0x0D, 0x8E, 0x0B, 0x34, 0x00};
+ 
+// Define a data structure
+typedef struct struct_message {
+  String Temp;
+  String Humi;
+} struct_message;
+ 
+// Create a structured object
+struct_message myData;
+ 
+// Peer info
+esp_now_peer_info_t peerInfo;
+ 
+// Callback function called when data is sent
+void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+  Serial.print("\r\nLast Packet Send Status:\t");
+  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+}
+ 
+void setup() {
+  
+  // Set up Serial Monitor
+  Serial.begin(115200);
+ 
+  // Set ESP32 as a Wi-Fi Station
+  WiFi.mode(WIFI_STA);
+
+  //Code for connection
+  WiFi.begin(ssid, password);
+  Serial.println("Connecting");
+  while(WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.print("Connected to WiFi network with IP Address: ");
+  Serial.println(WiFi.localIP());
+ 
+  // Initilize ESP-NOW
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("Error initializing ESP-NOW");
+    return;
+  }
+ 
+  // Register the send callback
+  esp_now_register_send_cb(OnDataSent);
+  
+  // Register peer
+  memcpy(peerInfo.peer_addr, broadcastAddress, 6);
+  peerInfo.channel = 0;  
+  peerInfo.encrypt = false;
+  
+  // Add peer        
+  if (esp_now_add_peer(&peerInfo) != ESP_OK){
+    Serial.println("Failed to add peer");
+    return;
+  }
+}
+ 
+void loop() {
+ 
+  if ((millis() - lastTime) > timerDelay) {
+    
+    if(WiFi.status()== WL_CONNECTED){
+      String serverPath = "http://api.openweathermap.org/data/2.5/weather?q=" + city + "," + countryCode + "&APPID=" + openWeatherMapApiKey;
+      
+      //function to get the value from openweather
+      jsonBuffer = httpGETRequest(serverPath.c_str());
+
+      Serial.println(jsonBuffer);
+      //The json value will be stored in myobject which is a variable
+      JSONVar myObject = JSON.parse(jsonBuffer);
+  
+      
+      if (JSON.typeof(myObject) == "undefined") {
+        Serial.println("Parsing input failed!");
+        return;
+      }
+      unsigned int temp=int(myObject["main"]["temp"]);
+      temp-=273;
+      Temperature_Value=(String) temp;
+     // Temperature_Value = JSON.stringify(myObject["main"]["temp"]);
+      Humidity_Value = JSON.stringify(myObject["main"]["humidity"]);
+    }
+    else {
+      Serial.println("WiFi Disconnected");
+    }
+
+    myData.Temp = Temperature_Value;
+    myData.Humi = Humidity_Value;
+  
+    // Send message via ESP-NOW
+    esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
+   
+    if (result == ESP_OK) {
+      Serial.println("Sending confirmed");
+    }
+    else {
+      Serial.println("Sending error");
+    }
+    delay(2000);
+
+    lastTime = millis();
+  } 
+}
+
+
+String httpGETRequest(const char* serverName) {
+  WiFiClient client;
+  HTTPClient http;
+    
+  
+  http.begin(client, serverName);
+  
+ 
+  int httpResponseCode = http.GET();
+  
+  String payload = "{}"; 
+  
+  if (httpResponseCode>0) {
+    Serial.print("HTTP Response code: ");
+    Serial.println(httpResponseCode);
+    payload = http.getString();
+  }
+  else {
+    Serial.print("Error code: ");
+    Serial.println(httpResponseCode);
+  }
+  
+  http.end();
+
+  return payload;
+}
