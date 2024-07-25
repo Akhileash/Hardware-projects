@@ -1,0 +1,2 @@
+The Real-Time Sensor Validation with Firebase Using ESP32 project focuses onintegrating the ESP32 microcontroller with sensors or various other parameters to transmit accurate environmental data to Firebase in real-time with less latency.This project aims to ensure the reliability and accuracy of sensor data through continuous 
+validation and efficient data handling.
